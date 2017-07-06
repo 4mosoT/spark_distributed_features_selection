@@ -8,7 +8,7 @@ __pycache__/
 # C extensions
 *.so
 
-.idea
+
 # Distribution / packaging
 .Python
 env/
@@ -141,3 +141,4 @@ crashlytics-build.properties
 fabric.properties
 
 /spark-warehouse/
+/.idea/
