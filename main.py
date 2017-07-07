@@ -2,34 +2,35 @@ from pyspark.sql import SparkSession
 import sklearn.feature_selection as fs
 import numpy as np
 import sys
+import partitions.partitioner as hr
 
 # TODO: Parse arguments
 
 ss = SparkSession.builder.appName("hsplit").master("local[*]").getOrCreate()
 
 dataframe = ss.read.option("maxColumns", "30000").csv(sys.argv[1])
-dataframe2 = dataframe.select([c for c in dataframe.columns[22200:]])
-input = dataframe2.rdd
-print(len(dataframe2.columns))
+dataframe = dataframe.select([c for c in dataframe.columns[22200:]]) #Selecting last rows of Gli85 dataset to speed up
+input = dataframe.rdd
 numParts = 8
 br_numParts = ss.sparkContext.broadcast(numParts)
 
-# First we flatMap and get index for each key, then we assign every index to a partition
-partitioned = input.map(lambda row: (row[len(row) - 1], row)).groupByKey() \
-    .flatMap(lambda key_iterable: enumerate(key_iterable[1])) \
-    .map(lambda index_row: (index_row[0] % br_numParts.value, index_row[1]))
+hpartitioner = hr.Partitioner()
+partitioned = hpartitioner.h_partition(input, br_numParts)
 
 
 def funcion(s):
     iterable = s[1]
     classes = []
     features = []
+    #Splitting each row in their class and features
     for x in iterable:
         classes.append(x[len(x) - 1])
         features.append(x[:len(x) - 1])
     classes = np.array(classes).astype(np.float)
     features = np.array(features).astype(np.float)
+    #Apply selection feature algorithm
     sel = fs.SelectKBest(fs.chi2).fit(features, classes)
+    #It returns an array with the index of selected features
     return sel.get_support(True)
 
 
