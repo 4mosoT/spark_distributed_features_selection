@@ -9,20 +9,23 @@ import partitions.partitioner as hr
 ss = SparkSession.builder.appName("hsplit").master("local[*]").getOrCreate()
 
 dataframe = ss.read.option("maxColumns", "30000").csv(sys.argv[1])
-dataframe = dataframe.select([c for c in dataframe.columns[22200:]]) #Selecting last rows of Gli85 dataset to speed up
+
+#Selecting last rows of Gli85 dataset to speed up for testing purposes
+dataframe = dataframe.select([c for c in dataframe.columns[22200:]])
+
 input = dataframe.rdd
 numParts = 8
 br_numParts = ss.sparkContext.broadcast(numParts)
 
 hpartitioner = hr.Partitioner()
-partitioned = hpartitioner.h_partition(input, br_numParts)
+partitioned = hpartitioner.horizontal_partition(input, br_numParts)
 
 
 def funcion(s):
     iterable = s[1]
     classes = []
     features = []
-    #Splitting each row in their class and features
+    #Splitting each row in its class and features
     for x in iterable:
         classes.append(x[len(x) - 1])
         features.append(x[:len(x) - 1])
